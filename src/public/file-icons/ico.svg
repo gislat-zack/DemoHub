@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <path fill="#EEF3F8" d="M8 2.5h11.2L25.5 8.8V27a2.5 2.5 0 0 1-2.5 2.5H8A2.5 2.5 0 0 1 5.5 27V5A2.5 2.5 0 0 1 8 2.5z"/>
+  <path fill="#FFFFFF" d="M19.2 2.8V9h6.2"/>
+  <path fill="#D5DEE8" d="M19.2 2.8 25.4 9H19.2z"/>
+  <rect x="4" y="17.5" width="24" height="10" rx="2" fill="#64748B"/>
+  <text x="16" y="24.6" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.4" font-weight="700" fill="#FFFFFF">ICO</text>
+</svg>
