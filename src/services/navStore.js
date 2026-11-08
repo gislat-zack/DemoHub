@@ -125,7 +125,23 @@ function deleteGroup(id) {
   if (!getGroup(id)) throw new Error('分组不存在');
   const db = getDb();
   const run = db.transaction(() => {
-    db.prepare('DELETE FROM nav_links WHERE group_id = ?').run(id);
+    let target = db.prepare(`
+      SELECT id FROM nav_groups
+      WHERE id != ? AND name = '未分组'
+      ORDER BY sort_order ASC, created_at ASC
+      LIMIT 1
+    `).get(id);
+    if (!target) {
+      target = db.prepare(`
+        SELECT id FROM nav_groups
+        WHERE id != ?
+        ORDER BY sort_order ASC, created_at ASC
+        LIMIT 1
+      `).get(id);
+    }
+    const targetId = target ? target.id : createGroup({ name: '未分组' }).id;
+    db.prepare('UPDATE nav_links SET group_id = ?, updated_at = ? WHERE group_id = ?')
+      .run(targetId, nowIso(), id);
     db.prepare('DELETE FROM nav_groups WHERE id = ?').run(id);
   });
   run();

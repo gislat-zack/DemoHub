@@ -40,12 +40,17 @@ function resolvePortalLogo(portal) {
   return small || large || '';
 }
 
+function portalMark(layout) {
+  const bar = layout === 'sidebar' ? '<path d="M9 4v16"/>' : '<path d="M3 9h18"/>';
+  return `<svg class="portal-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/>${bar}</svg>`;
+}
+
 function portalBrandHtml(portal, logoUrl, withFallback) {
   const logoHtml = logoUrl
     ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(portal.name)}" class="portal-brand-logo">`
     : '';
   const fallbackHtml = withFallback && !logoUrl
-    ? `<span class="portal-brand-fallback">${escapeHtml((portal.name || 'P').slice(0, 1))}</span>`
+    ? `<span class="portal-brand-fallback">${portalMark(portal.layout)}</span>`
     : '';
   const nameHtml = logoUrl
     ? ''
@@ -257,7 +262,7 @@ function renderMenu(nodes, activeId, slug, parentPath = '', autoOpen = true) {
 
 function wrapInPortalShell(portal, page, menuTreeHtml, frameSrc, currentUser, contentHtml = '') {
   const logoUrl = resolvePortalLogo(portal);
-  const brand = portalBrandHtml(portal, logoUrl, portal.layout === 'sidebar');
+  const brand = portalBrandHtml(portal, logoUrl, !logoUrl);
   const logoutLink = portalUserMenu(currentUser);
   const frame = contentHtml || `<iframe class="portal-frame" src="${escapeHtml(frameSrc)}" title="${escapeHtml(page.title)}"></iframe>`;
 
@@ -283,7 +288,7 @@ function wrapInPortalShell(portal, page, menuTreeHtml, frameSrc, currentUser, co
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(page.title)} - ${escapeHtml(portal.name)}</title>
-  <link rel="stylesheet" href="/portal-static/portal.css">
+  <link rel="stylesheet" href="/portal-static/portal.css?v=20261106-mark">
 </head>
 <body class="${portalThemeClass(portal.theme)} portal-layout-${portal.layout}">
   ${shell}
@@ -297,7 +302,7 @@ function buildEmptyPortal(portal, currentUser) {
   const tree = buildTree(pages);
   const menuTreeHtml = renderMenu(tree, null, portal.slug, '', portal.layout !== 'topbar');
   const logoUrl = resolvePortalLogo(portal);
-  const brand = portalBrandHtml(portal, logoUrl, portal.layout === 'sidebar');
+  const brand = portalBrandHtml(portal, logoUrl, !logoUrl);
 
   let shell;
   if (portal.layout === 'sidebar') {
@@ -335,7 +340,7 @@ function buildEmptyPortal(portal, currentUser) {
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(portal.name)}</title>
-  <link rel="stylesheet" href="/portal-static/portal.css">
+  <link rel="stylesheet" href="/portal-static/portal.css?v=20261106-mark">
 </head>
 <body class="${portalThemeClass(portal.theme)} portal-layout-${portal.layout}">${shell}</body>
 ${lucideBootstrapTag()}
@@ -357,7 +362,7 @@ function buildPortalLoginHtml(portal, csrfToken, error, next) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>登录 - ${escapeHtml(portal.name)}</title>
-  <link rel="stylesheet" href="/portal-static/portal.css">
+  <link rel="stylesheet" href="/portal-static/portal.css?v=20261106-mark">
 </head>
 <body class="${portalThemeClass(portal.theme)} portal-login-body">
   <div class="portal-login-wrap">

@@ -37,7 +37,7 @@ function usersPage({ users, query, currentUser, csrfToken, settings, dataSize, d
   const adminCount = users.filter((user) => user.role === 'admin').length;
 
   const rows = users.map((user) => `
-    <tr>
+    <tr class="user-list-row" data-name="${escapeHtml(user.username).toLowerCase()}">
       <td>
         <div class="file-cell">
           <div class="avatar">${escapeHtml(userInitial(user.username))}</div>
@@ -56,11 +56,11 @@ function usersPage({ users, query, currentUser, csrfToken, settings, dataSize, d
             <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
             <button class="act" type="submit">审批通过</button>
           </form>
-          <form method="post" action="/admin/users/${escapeHtml(user.id)}/reject">
+          <form method="post" action="/admin/users/${escapeHtml(user.id)}/reject" data-confirm="确认拒绝这个用户吗？">
             <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
             <button class="act act-danger" type="submit">拒绝</button>
           </form>
-          <form method="post" action="/admin/users/${escapeHtml(user.id)}/disable">
+          <form method="post" action="/admin/users/${escapeHtml(user.id)}/disable" data-confirm="确认禁用这个用户吗？">
             <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
             <button class="act act-danger" type="submit">禁用</button>
           </form>
@@ -84,7 +84,7 @@ function usersPage({ users, query, currentUser, csrfToken, settings, dataSize, d
           <div class="page-desc">团队成员与审批状态，共 ${escapeHtml(users.length)} 个账号</div>
         </div>
         <div class="head-actions">
-          <button class="btn" type="button" id="openCreateUser">+ 新增用户</button>
+          <button class="btn btn-primary" type="button" id="openCreateUser">+ 新增用户</button>
         </div>
       </div>
       ${renderAlert(query)}
@@ -97,7 +97,11 @@ function usersPage({ users, query, currentUser, csrfToken, settings, dataSize, d
       <div class="panel">
         <div class="panel-bar">
           <div class="panel-title">团队成员</div>
-          <div class="panel-meta">注册用户需审批通过后才能使用系统</div>
+          <form class="nav-search-wrap" role="search" id="userSearchForm" action="#" onsubmit="return false;">
+            <label class="sr-only" for="userSearch">搜索用户</label>
+            <span class="nav-search-icon">${iconSvg('site', 15)}</span>
+            <input type="search" class="nav-search" id="userSearch" placeholder="搜索用户" autocomplete="off">
+          </form>
         </div>
         <div class="table-scroll">
           <table>
@@ -108,12 +112,12 @@ function usersPage({ users, query, currentUser, csrfToken, settings, dataSize, d
       </div>
       <div class="tree-modal" id="createUserModal" style="display:none;">
         <div class="tree-modal-overlay" id="createUserOverlay"></div>
-        <div class="tree-modal-card" style="width:420px;">
+        <div class="tree-modal-card">
           <div class="tree-modal-header">
             <span class="tree-modal-title">新增用户</span>
-            <button class="tree-modal-close" id="createUserClose" type="button">&times;</button>
+            <button class="tree-modal-close" id="createUserClose" type="button" aria-label="关闭"></button>
           </div>
-          <div class="tree-modal-body" style="padding:22px;">
+          <div class="tree-modal-body">
             <form class="stack-form" method="post" action="/admin/users" style="margin:0;">
               <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
               <label>用户名<input name="username" autocomplete="off" required minlength="3" maxlength="32"></label>
@@ -125,7 +129,7 @@ function usersPage({ users, query, currentUser, csrfToken, settings, dataSize, d
                   <option value="admin">管理员</option>
                 </select>
               </label>
-              <button type="submit">创建</button>
+              <button class="btn btn-primary" type="submit">创建</button>
             </form>
           </div>
         </div>
@@ -140,6 +144,15 @@ function usersPage({ users, query, currentUser, csrfToken, settings, dataSize, d
         openBtn.addEventListener('click', open);
         document.getElementById('createUserClose').addEventListener('click', close);
         document.getElementById('createUserOverlay').addEventListener('click', close);
+        var search = document.getElementById('userSearch');
+        if (search) {
+          search.addEventListener('input', function () {
+            var q = search.value.trim().toLowerCase();
+            document.querySelectorAll('.user-list-row').forEach(function (row) {
+              row.hidden = q && (row.getAttribute('data-name') || '').indexOf(q) === -1;
+            });
+          });
+        }
       })();
       </script>
     `

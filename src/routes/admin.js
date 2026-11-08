@@ -39,7 +39,6 @@ const { requireAuth, requireAdmin, requireCsrf } = require('../middleware/auth')
 const { adminPage } = require('../views/adminPage');
 const { dashboardPage } = require('../views/dashboardPage');
 const { fileManagerPage } = require('../views/fileManagerPage');
-const { uploadPage } = require('../views/uploadPage');
 const { settingsPage } = require('../views/settingsPage');
 const { usersPage } = require('../views/usersPage');
 const { navPage } = require('../views/navPage');
@@ -72,7 +71,7 @@ const logoUpload = multer({
   }),
   limits: {
     fileSize: 2 * 1024 * 1024,
-    files: 2
+    files: 3
   },
   fileFilter(_req, file, cb) {
     const allowed = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
@@ -176,10 +175,11 @@ function currentView(req) {
   return req.query.view || req.body.returnView || '';
 }
 
-function redirectWithError(res, error, folder = '', view = '') {
+function redirectWithError(res, error, folder = '', view = '', upload = false) {
   const params = { error: error.message || String(error) };
   if (folder) params.folder = folder;
   if (view) params.view = view;
+  if (upload) params.upload = '1';
   res.redirect(adminRedirect(params));
 }
 
@@ -363,25 +363,11 @@ router.get('/admin', (req, res) => {
 });
 
 router.get('/admin/upload', (req, res) => {
-  try {
-    const selectedFolder = req.query.folder || '';
-    if (selectedFolder && selectedFolder !== 'ungrouped') {
-      validateFolderId(selectedFolder);
-    }
-
-    res.send(uploadPage({
-      folders: listFoldersWithCounts(),
-      selectedFolder,
-      query: req.query,
-      currentUser: req.currentUser,
-      csrfToken: req.csrfToken,
-      settings: req.appSettings,
-      dataSize: req.dataSize,
-      diskStats: req.diskStats
-    }));
-  } catch (error) {
-    res.redirect(adminRedirect({ error: error.message }));
-  }
+  const folder = typeof req.query.folder === 'string' ? req.query.folder : '';
+  const view = req.query.view === 'files' ? 'files' : 'sites';
+  const params = { view, upload: '1' };
+  if (folder) params.folder = folder;
+  res.redirect(adminRedirect(params));
 });
 
 router.post('/admin/upload', (req, res) => {
@@ -390,13 +376,14 @@ router.post('/admin/upload', (req, res) => {
     { name: 'siteFiles', maxCount: config.zipLimits.maxEntries }
   ])(req, res, async (error) => {
     const folder = currentFolderQuery(req);
+    const returnView = req.body && req.body.returnView ? req.body.returnView : '';
     if (error) {
       const message = error.code === 'LIMIT_FILE_SIZE'
         ? '上传文件超过大小限制'
         : error.code === 'LIMIT_FILE_COUNT' || error.code === 'LIMIT_UNEXPECTED_FILE'
           ? '文件数量超过限制'
           : error.message;
-      redirectWithError(res, new Error(message), folder);
+      redirectWithError(res, new Error(message), folder, returnView, true);
       return;
     }
 
@@ -442,7 +429,7 @@ router.post('/admin/upload', (req, res) => {
       res.redirect(adminRedirect({ view: view || 'sites', uploaded: site.id, folder: folderId || folder }));
     } catch (uploadError) {
       await Promise.all(uploaded.map((file) => fs.rm(file.path, { force: true })));
-      redirectWithError(res, uploadError, folder);
+      redirectWithError(res, uploadError, folder, view, true);
     }
   });
 });
@@ -684,11 +671,13 @@ router.get('/admin/settings', requireAdmin, (req, res) => {
 router.post('/admin/settings', requireAdmin, (req, res) => {
   logoUpload.fields([
     { name: 'logo', maxCount: 1 },
-    { name: 'logoSmall', maxCount: 1 }
+    { name: 'logoSmall', maxCount: 1 },
+    { name: 'loginBg', maxCount: 1 }
   ])(req, res, async (error) => {
     const uploaded = []
       .concat((req.files && req.files.logo) || [])
-      .concat((req.files && req.files.logoSmall) || []);
+      .concat((req.files && req.files.logoSmall) || [])
+      .concat((req.files && req.files.loginBg) || []);
 
     if (error) {
       await Promise.all(uploaded.map((file) => fs.unlink(file.path).catch(() => {})));
@@ -702,7 +691,7 @@ router.post('/admin/settings', requireAdmin, (req, res) => {
     }
 
     try {
-      const section = ['basic', 'logo', 'theme', 'register', 'share'].includes(req.body.section) ? req.body.section : 'basic';
+      const section = ['basic', 'logo', 'login', 'theme', 'register', 'share'].includes(req.body.section) ? req.body.section : 'basic';
       const back = (extra = {}) => {
         const params = new URLSearchParams({ tab: section, ...extra });
         return `/admin/settings?${params.toString()}`;
@@ -718,7 +707,7 @@ router.post('/admin/settings', requireAdmin, (req, res) => {
         updates.site_name = siteName.slice(0, 50);
         updates.site_subtitle = (req.body.siteSubtitle || '').trim().slice(0, 40);
       } else if (section === 'logo') {
-        updates.logo_display = req.body.logoDisplay === 'small' ? 'small' : 'large';
+        updates.logo_display = req.body.logoDisplay === 'large' ? 'large' : 'small';
         async function applyLogo(field, settingKey) {
           const file = req.files && req.files[field] && req.files[field][0];
           if (!file) return;
@@ -730,8 +719,23 @@ router.post('/admin/settings', requireAdmin, (req, res) => {
         }
         await applyLogo('logo', 'logo_url');
         await applyLogo('logoSmall', 'logo_small_url');
+      } else if (section === 'login') {
+        const file = req.files && req.files.loginBg && req.files.loginBg[0];
+        const current = settingsStore.get('login_bg_url', '');
+        if (req.body.removeLoginBg === '1' && !file) {
+          if (current.startsWith('/logo/')) {
+            await fs.unlink(path.join(config.logoDir, path.basename(current))).catch(() => {});
+          }
+          updates.login_bg_url = '';
+        }
+        if (file) {
+          if (current.startsWith('/logo/')) {
+            await fs.unlink(path.join(config.logoDir, path.basename(current))).catch(() => {});
+          }
+          updates.login_bg_url = `/logo/${file.filename}`;
+        }
       } else if (section === 'register') {
-        updates.allow_register = req.body.allowRegister === '0' ? '0' : '1';
+        updates.allow_register = req.body.allowRegister === '1' ? '1' : '0';
       } else if (section === 'share') {
         updates.public_base_url = normalizeShareBase(req.body.publicBaseUrl);
       } else {

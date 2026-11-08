@@ -6,10 +6,12 @@ function settingsPage({ settings, query, currentUser, csrfToken, dataSize, diskS
   const logoUrl = settings.logo_url || '';
   const logoSmallUrl = settings.logo_small_url || '';
   const logoDisplay = settings.logo_display === 'small' ? 'small' : 'large';
+  const loginBgUrl = settings.login_bg_url || '';
   const theme = settings.theme === 'dark' ? 'dark' : 'light';
   const tabs = [
     { id: 'basic', label: '基本信息' },
     { id: 'logo', label: 'Logo' },
+    { id: 'login', label: '登录页' },
     { id: 'theme', label: '主题' },
     { id: 'register', label: '用户注册' },
     { id: 'share', label: '分享地址' },
@@ -92,18 +94,37 @@ function settingsPage({ settings, query, currentUser, csrfToken, dataSize, diskS
                     <input type="file" name="logoSmall" accept=".png,.jpg,.jpeg,.gif,.svg,.webp">
                   </div>
                 </div>
-                <div class="settings-label">
-                  <span>导航栏显示</span>
-                  <div class="settings-theme-group">
-                    <label class="theme-option ${logoDisplay === 'large' ? 'active' : ''}">
-                      <input type="radio" name="logoDisplay" value="large" ${logoDisplay === 'large' ? 'checked' : ''}>
-                      <span class="theme-swatch">大 Logo</span>
-                    </label>
-                    <label class="theme-option ${logoDisplay === 'small' ? 'active' : ''}">
-                      <input type="radio" name="logoDisplay" value="small" ${logoDisplay === 'small' ? 'checked' : ''}>
-                      <span class="theme-swatch">小 Logo</span>
-                    </label>
+                <div class="settings-switch-row">
+                  <div>
+                    <div class="settings-switch-title">导航栏显示大 Logo</div>
+                    <div class="storage-hint">关闭后，侧边栏使用小 Logo。</div>
                   </div>
+                  <label class="switch">
+                    <input type="checkbox" name="logoDisplay" value="large" ${logoDisplay === 'large' ? 'checked' : ''}>
+                    <span class="switch-ui" aria-hidden="true"></span>
+                  </label>
+                </div>
+                <div class="settings-actions">
+                  <button type="submit">保存</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <section class="settings-panel${activeTab === 'login' ? ' active' : ''}" data-settings-panel="login">
+            <div class="settings-card">
+              <div class="settings-title">登录页</div>
+              <form class="settings-form" method="post" action="/admin/settings" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+                <input type="hidden" name="section" value="login">
+                <div class="logo-slot">
+                  <span class="settings-label-text">背景图片</span>
+                  <p class="logo-slot-hint">横向大图，保存后铺满登录页。支持 PNG、JPG、GIF、WEBP、SVG，不超过 2MB。</p>
+                  <label class="logo-preview login-bg-preview">
+                    ${loginBgUrl ? `<img src="${escapeHtml(loginBgUrl)}" alt="登录页背景">` : '<span>未设置</span>'}
+                    <input type="file" name="loginBg" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+                  </label>
+                  ${loginBgUrl ? '<label class="check-line"><input type="checkbox" name="removeLoginBg" value="1">移除背景图</label>' : ''}
                 </div>
                 <div class="settings-actions">
                   <button type="submit">保存</button>
@@ -118,18 +139,15 @@ function settingsPage({ settings, query, currentUser, csrfToken, dataSize, diskS
               <form class="settings-form" method="post" action="/admin/settings" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
                 <input type="hidden" name="section" value="theme">
-                <div class="settings-label">
-                  <span>默认主题</span>
-                  <div class="settings-theme-group">
-                    <label class="theme-option ${theme === 'light' ? 'active' : ''}">
-                      <input type="radio" name="theme" value="light" ${theme === 'light' ? 'checked' : ''}>
-                      <span class="theme-swatch light">浅色</span>
-                    </label>
-                    <label class="theme-option ${theme === 'dark' ? 'active' : ''}">
-                      <input type="radio" name="theme" value="dark" ${theme === 'dark' ? 'checked' : ''}>
-                      <span class="theme-swatch dark">深色</span>
-                    </label>
+                <div class="settings-switch-row">
+                  <div>
+                    <div class="settings-switch-title">深色模式</div>
+                    <div class="storage-hint">关闭为浅色主题，开启为深色主题。</div>
                   </div>
+                  <label class="switch">
+                    <input type="checkbox" name="theme" value="dark" ${theme === 'dark' ? 'checked' : ''}>
+                    <span class="switch-ui" aria-hidden="true"></span>
+                  </label>
                 </div>
                 <div class="settings-actions">
                   <button type="submit">保存</button>
@@ -144,19 +162,15 @@ function settingsPage({ settings, query, currentUser, csrfToken, dataSize, diskS
               <form class="settings-form" method="post" action="/admin/settings" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
                 <input type="hidden" name="section" value="register">
-                <div class="settings-label">
-                  <span>允许用户注册</span>
-                  <div class="settings-theme-group">
-                    <label class="theme-option ${settings.allow_register === '0' ? '' : 'active'}">
-                      <input type="radio" name="allowRegister" value="1" ${settings.allow_register === '0' ? '' : 'checked'}>
-                      <span class="theme-swatch">开启</span>
-                    </label>
-                    <label class="theme-option ${settings.allow_register === '0' ? 'active' : ''}">
-                      <input type="radio" name="allowRegister" value="0" ${settings.allow_register === '0' ? 'checked' : ''}>
-                      <span class="theme-swatch">关闭</span>
-                    </label>
+                <div class="settings-switch-row">
+                  <div>
+                    <div class="settings-switch-title">允许用户注册</div>
+                    <div class="storage-hint">关闭后，登录页不再提供注册入口，已有用户不受影响。系统尚无用户时，仍可创建第一个管理员。</div>
                   </div>
-                  <div class="storage-hint">关闭后，登录页不再提供注册入口，已有用户不受影响。系统尚无用户时，仍可创建第一个管理员。</div>
+                  <label class="switch">
+                    <input type="checkbox" name="allowRegister" value="1" ${settings.allow_register === '0' ? '' : 'checked'}>
+                    <span class="switch-ui" aria-hidden="true"></span>
+                  </label>
                 </div>
                 <div class="settings-actions">
                   <button type="submit">保存</button>
@@ -213,44 +227,77 @@ function settingsPage({ settings, query, currentUser, csrfToken, dataSize, diskS
             <div class="settings-card">
               <div class="settings-title">导航分组</div>
               <p class="storage-hint">分组只在这里管理。导航页只展示网址图标，新添加的网址会归入第一个分组。</p>
-              <form class="nav-group-create" method="post" action="/admin/nav/groups">
-                <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
-                <input name="name" maxlength="40" required placeholder="新分组名称">
-                <button type="submit">保存</button>
-              </form>
-              <div class="nav-group-manage">
-                ${navGroups.length === 0 ? '<div class="nav-empty">还没有分组。</div>' : navGroups.map((group) => `
-                  <div class="nav-group-manage-row">
-                    <form method="post" action="/admin/nav/groups/${escapeHtml(group.id)}/rename" class="nav-group-rename-form">
-                      <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
-                      <input name="name" value="${escapeHtml(group.name)}" maxlength="40" required>
-                      <button type="submit">保存</button>
-                    </form>
-                    <span class="nav-group-count-badge">${Number(group.linkCount) || 0}</span>
-                    <form method="post" action="/admin/nav/groups/${escapeHtml(group.id)}/delete" onsubmit="return confirm('确认删除分组「${escapeHtml(group.name)}」吗？其中的网址将一并删除。');">
-                      <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
-                      <button type="submit" class="btn btn-danger">删除</button>
-                    </form>
-                  </div>
-                `).join('')}
+              <div class="nav-group-toolbar">
+                <button type="button" class="btn btn-primary" id="navGroupOpen">新增</button>
+              </div>
+              <div class="table-scroll">
+                <table class="nav-group-table">
+                  <thead><tr><th>分组名称</th><th style="width:96px">网址数</th><th style="width:88px;text-align:right">操作</th></tr></thead>
+                  <tbody>
+                    ${navGroups.length === 0 ? '<tr><td colspan="3" class="empty-cell">还没有分组。</td></tr>' : navGroups.map((group) => `
+                      <tr>
+                        <td>
+                          <form method="post" action="/admin/nav/groups/${escapeHtml(group.id)}/rename" class="nav-group-rename-form">
+                            <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+                            <input name="name" value="${escapeHtml(group.name)}" maxlength="40" required>
+                            <button type="submit">保存</button>
+                          </form>
+                        </td>
+                        <td>${Number(group.linkCount) || 0}</td>
+                        <td>
+                          <form method="post" action="/admin/nav/groups/${escapeHtml(group.id)}/delete" class="actions" data-confirm="确认删除分组「${escapeHtml(group.name)}」吗？分组内的网址会保留。">
+                            <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+                            <button type="submit" class="act act-danger">删除</button>
+                          </form>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
               </div>
             </div>
           </section>
         </div>
       </div>
 
+      <div class="tree-modal" id="navGroupModal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="navGroupTitle">
+        <div class="tree-modal-overlay" id="navGroupOverlay"></div>
+        <div class="tree-modal-card nav-group-dialog">
+          <div class="tree-modal-header">
+            <span class="tree-modal-title" id="navGroupTitle">新增分组</span>
+            <button type="button" class="tree-modal-close" id="navGroupClose" aria-label="关闭"></button>
+          </div>
+          <form method="post" action="/admin/nav/groups">
+            <div class="nav-group-dialog-body">
+              <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+              <label class="settings-label">
+                <span>分组名称</span>
+                <input name="name" maxlength="40" required placeholder="请输入分组名称">
+              </label>
+            </div>
+            <div class="nav-group-dialog-footer">
+              <button type="button" class="btn" id="navGroupCancel">取消</button>
+              <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div class="tree-modal" id="dirPickerModal" hidden>
+        <div class="tree-modal-overlay" id="dirPickerOverlay"></div>
         <div class="tree-modal-card dir-picker-card">
-          <div class="tree-modal-head">
-            <strong>选择数据目录</strong>
-            <button type="button" class="tree-modal-close" id="dirPickerClose" aria-label="关闭">×</button>
+          <div class="tree-modal-header">
+            <span class="tree-modal-title">选择数据目录</span>
+            <button type="button" class="tree-modal-close" id="dirPickerClose" aria-label="关闭"></button>
           </div>
-          <div class="dir-picker-path-row">
-            <input id="dirPickerPath" placeholder="输入服务器上的目录路径">
-            <button type="button" class="btn" id="dirPickerGo">打开</button>
+          <div class="tree-modal-body dir-picker-body">
+            <div class="dir-picker-path-row">
+              <input id="dirPickerPath" placeholder="输入服务器上的目录路径">
+              <button type="button" class="btn" id="dirPickerGo">打开</button>
+            </div>
+            <div class="dir-picker-error" id="dirPickerError"></div>
+            <div class="dir-picker-list" id="dirPickerList"></div>
           </div>
-          <div class="dir-picker-error" id="dirPickerError"></div>
-          <div class="dir-picker-list" id="dirPickerList"></div>
           <div class="tree-modal-actions">
             <button type="button" class="btn" id="dirPickerUp">上级</button>
             <button type="button" class="btn" id="dirPickerRoots">磁盘/根目录</button>
@@ -273,14 +320,29 @@ function settingsPage({ settings, query, currentUser, csrfToken, dataSize, diskS
           });
         });
 
-        document.querySelectorAll('.settings-theme-group').forEach(function (group) {
-          group.addEventListener('change', function (event) {
-            var input = event.target;
-            if (!input || input.type !== 'radio') return;
-            group.querySelectorAll('.theme-option').forEach(function (option) {
-              option.classList.toggle('active', option.contains(input) && input.checked);
-            });
-          });
+        var navGroupModal = document.getElementById('navGroupModal');
+        function openNavGroup() {
+          if (!navGroupModal) return;
+          navGroupModal.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+          var input = navGroupModal.querySelector('input[name="name"]');
+          if (input) input.focus();
+        }
+        function closeNavGroup() {
+          if (!navGroupModal) return;
+          navGroupModal.style.display = 'none';
+          document.body.style.overflow = '';
+        }
+        var navGroupOpen = document.getElementById('navGroupOpen');
+        var navGroupOverlay = document.getElementById('navGroupOverlay');
+        var navGroupClose = document.getElementById('navGroupClose');
+        var navGroupCancel = document.getElementById('navGroupCancel');
+        if (navGroupOpen) navGroupOpen.addEventListener('click', openNavGroup);
+        if (navGroupOverlay) navGroupOverlay.addEventListener('click', closeNavGroup);
+        if (navGroupClose) navGroupClose.addEventListener('click', closeNavGroup);
+        if (navGroupCancel) navGroupCancel.addEventListener('click', closeNavGroup);
+        document.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape' && navGroupModal && navGroupModal.style.display === 'flex') closeNavGroup();
         });
 
         var currentPath = ${JSON.stringify(currentDataDir || '')};
@@ -355,7 +417,8 @@ function settingsPage({ settings, query, currentUser, csrfToken, dataSize, diskS
           var button = document.getElementById(id);
           if (button) button.addEventListener('click', closePicker);
         });
-        if (modal) modal.addEventListener('click', function (event) { if (event.target === modal) closePicker(); });
+        var overlay = document.getElementById('dirPickerOverlay');
+        if (overlay) overlay.addEventListener('click', closePicker);
       })();
       </script>
     `

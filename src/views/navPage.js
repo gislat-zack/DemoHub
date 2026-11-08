@@ -53,17 +53,18 @@ function navPage({ links, query, currentUser, csrfToken, settings, dataSize, dis
           <div class="page-desc">常用网址图标，支持拖拽排序与关键字直达</div>
         </div>
         <div class="head-actions">
-          <div class="nav-search-wrap">
+          <form class="nav-search-wrap" role="search" id="navSearchForm" action="#" onsubmit="return false;">
+            <label class="sr-only" for="navSearch">搜索网址</label>
             <span class="nav-search-icon">${iconSvg('site', 15)}</span>
-            <input type="text" class="nav-search" id="navSearch" placeholder="搜索，回车直达" autocomplete="off" autocorrect="off" spellcheck="false">
+            <input type="search" class="nav-search" id="navSearch" placeholder="搜索，回车直达" autocomplete="off" autocorrect="off" spellcheck="false">
             <kbd class="nav-search-kbd">↵</kbd>
-          </div>
+          </form>
           <div class="nav-toolbar-meta" id="navResultMeta"></div>
           <button type="button" class="btn btn-primary" id="navAddLinkBtn">${iconSvg('link', 15)}添加网址</button>
         </div>
       </div>
 
-      ${toast ? `<div class="app-toast ${toast.kind === 'error' ? 'is-error' : 'is-success'}" id="pageToast">${escapeHtml(toast.text)}</div>` : ''}
+      ${toast ? `<div class="app-toast ${toast.kind === 'error' ? 'is-error' : 'is-success'}" id="pageToast" role="status"><span class="app-toast-icon" aria-hidden="true">${toast.kind === 'error' ? '!' : '✓'}</span><span class="app-toast-text">${escapeHtml(toast.text)}</span></div>` : ''}
 
       <div class="nav-main">
         <div class="nav-cards-grid" id="navGrid">${cards}</div>
@@ -71,12 +72,12 @@ function navPage({ links, query, currentUser, csrfToken, settings, dataSize, dis
 
       <div class="tree-modal" id="navLinkModal" style="display:none;">
         <div class="tree-modal-overlay" data-close-nav-link></div>
-        <div class="tree-modal-card" style="width:480px;">
+        <div class="tree-modal-card">
           <div class="tree-modal-header">
             <span class="tree-modal-title" id="navLinkTitle">添加网址</span>
-            <button class="tree-modal-close" type="button" data-close-nav-link>&times;</button>
+            <button class="tree-modal-close" type="button" data-close-nav-link aria-label="关闭"></button>
           </div>
-          <div class="tree-modal-body" style="padding:22px;">
+          <div class="tree-modal-body">
             <form method="post" id="navLinkForm" enctype="multipart/form-data">
               <input type="hidden" name="_csrf" value="">
               <input type="hidden" name="keepIcon" value="">
@@ -118,12 +119,12 @@ function navPage({ links, query, currentUser, csrfToken, settings, dataSize, dis
 
       <div class="tree-modal" id="navDeleteModal" style="display:none;">
         <div class="tree-modal-overlay" data-close-nav-delete></div>
-        <div class="tree-modal-card" style="width:400px;">
+        <div class="tree-modal-card">
           <div class="tree-modal-header">
             <span class="tree-modal-title">删除网址</span>
-            <button class="tree-modal-close" type="button" data-close-nav-delete>&times;</button>
+            <button class="tree-modal-close" type="button" data-close-nav-delete aria-label="关闭"></button>
           </div>
-          <div class="tree-modal-body" style="padding:22px;">
+          <div class="tree-modal-body">
             <form method="post" id="navDeleteForm">
               <input type="hidden" name="_csrf" value="">
               <p class="nav-delete-text" id="navDeleteText"></p>

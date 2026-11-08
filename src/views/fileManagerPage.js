@@ -1,5 +1,6 @@
 const { layout, escapeHtml, formatBytes, iconSvg, fileKindIcon, renderToast } = require('./layout');
 const { typeLabel, iconClass, previewMode } = require('../services/fileTypes');
+const { renderUploadModal } = require('./uploadPage');
 
 function formatDate(value) {
   return new Date(value).toLocaleString('zh-CN', { hour12: false });
@@ -45,7 +46,7 @@ function renderFolderTree({ folders, selectedFolderId, totalCount, ungroupedCoun
       </a>
       <div class="fm-folder-actions">
         <a class="fm-action-btn" href="javascript:void(0)" data-action-modal="rename-folder" data-modal-title="重命名文件夹" data-action-url="/admin/folders/${escapeHtml(folder.id)}/rename" data-csrf="${escapeHtml(csrfToken)}" data-folder="${escapeHtml(folder.id)}" data-current-name="${escapeHtml(folder.name)}" title="重命名">✎</a>
-        <form method="post" action="/admin/folders/${escapeHtml(folder.id)}/delete" onsubmit="return confirm('确认删除文件夹「${escapeHtml(folder.name)}」吗？其中的站点将移入未分组。');">
+        <form method="post" action="/admin/folders/${escapeHtml(folder.id)}/delete" data-confirm="确认删除文件夹「${escapeHtml(folder.name)}」吗？其中的站点将移入未分组。">
           <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
           <button class="fm-action-btn danger" type="submit" title="删除">×</button>
         </form>
@@ -69,16 +70,17 @@ function renderSiteTable({ sites, folders, csrfToken, selectedFolderId, baseUrl 
     return `<div class="fm-empty">
       <div class="fm-empty-icon">📂</div>
       <div class="fm-empty-text">当前文件夹暂无站点</div>
-      <a class="btn btn-primary" href="/admin/upload${selectedFolderId && selectedFolderId !== '__ungrouped__' ? '?folder=' + encodeURIComponent(selectedFolderId) : ''}">上传文件</a>
+      <button type="button" class="btn btn-primary" data-open-upload>上传文件</button>
     </div>`;
   }
 
   const rows = sites.map((site) => {
     const url = `${baseUrl}/sites/${site.id}/`;
-  const preview = previewMode(site.kind);
-  const previewBtn = preview
-    ? `<button type="button" class="act" data-preview-url="${escapeHtml(url)}" data-preview-type="${escapeHtml(preview)}" data-preview-name="${escapeHtml(site.originalName)}">预览</button>`
-    : '';
+    const previewUrl = `/sites/${site.id}/`;
+    const preview = previewMode(site.kind);
+    const previewBtn = preview
+      ? `<button type="button" class="act" data-preview-url="${escapeHtml(previewUrl)}" data-preview-type="${escapeHtml(preview)}" data-preview-name="${escapeHtml(site.originalName)}">预览</button>`
+      : '';
     return `<tr class="site-row" data-name="${escapeHtml(site.originalName)}" data-url="${escapeHtml(url)}">
       <td class="fm-check-cell"><input class="fm-check fm-check-site" type="checkbox" name="ids" value="${escapeHtml(site.id)}" form="fm-batch-download"></td>
       <td>
@@ -98,7 +100,7 @@ function renderSiteTable({ sites, folders, csrfToken, selectedFolderId, baseUrl 
         <div class="actions">
           ${previewBtn}
           <a class="act" href="javascript:void(0)" data-action-modal="move" data-modal-title="移动站点 — ${escapeHtml(site.originalName)}" data-action-url="/admin/sites/${escapeHtml(site.id)}/move" data-csrf="${escapeHtml(csrfToken)}" data-folder="${escapeHtml(selectedFolderId || '')}" data-view="files" data-options="${escapeHtml(renderFolderOptions(folders, site.folderId || ''))}">移动</a>
-          <form method="post" action="/admin/sites/${escapeHtml(site.id)}/delete" onsubmit="return confirm('确认删除这个站点吗？');">
+          <form method="post" action="/admin/sites/${escapeHtml(site.id)}/delete" data-confirm="确认删除这个站点吗？">
             <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
             <input type="hidden" name="returnFolder" value="${escapeHtml(selectedFolderId || '')}">
             <input type="hidden" name="returnView" value="files">
@@ -151,13 +153,14 @@ function fileManagerPage({ folders, selectedFolderId, sites, totalCount, ungroup
           <div class="page-desc">按文件夹浏览并整理已上传的静态站点</div>
         </div>
         <div class="head-actions">
-          <div class="nav-search-wrap">
+          <form class="nav-search-wrap" role="search" id="fileSearchForm" action="#" onsubmit="return false;">
+            <label class="sr-only" for="fileSearch">搜索文件</label>
             <span class="nav-search-icon">${iconSvg('site', 15)}</span>
-            <input type="text" class="nav-search" id="fileSearch" placeholder="搜索，回车直达" autocomplete="off" autocorrect="off" spellcheck="false">
+            <input type="search" class="nav-search" id="fileSearch" placeholder="搜索，回车直达" autocomplete="off" autocorrect="off" spellcheck="false">
             <kbd class="nav-search-kbd">↵</kbd>
-          </div>
+          </form>
           <div class="nav-toolbar-meta" id="fileResultMeta"></div>
-          <a class="btn btn-primary" href="/admin/upload${uploadFolder ? '?folder=' + encodeURIComponent(uploadFolder) : ''}">${iconSvg('upload', 15)}上传文件</a>
+          <button type="button" class="btn btn-primary" data-open-upload>${iconSvg('upload', 15)}上传文件</button>
         </div>
       </div>
 
@@ -331,6 +334,14 @@ function fileManagerPage({ folders, selectedFolderId, sites, totalCount, ungroup
           });
         })();
       </script>
+      ${renderUploadModal({
+        folders,
+        selectedFolder: uploadFolder,
+        returnFolder: selectedFolderId || '',
+        csrfToken,
+        returnView: 'files',
+        open: query.upload === '1'
+      })}
     `
   });
 }

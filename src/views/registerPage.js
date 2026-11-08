@@ -14,7 +14,7 @@ function registerPage({ query = {}, isFirstUser, settings = null }) {
           <label>用户名<input name="username" autocomplete="username" required></label>
           <label>密码<input name="password" type="password" autocomplete="new-password" required></label>
           <label>确认密码<input name="confirmPassword" type="password" autocomplete="new-password" required></label>
-          <button type="submit">${isFirstUser ? '创建管理员' : '注册'}</button>
+          <button class="btn btn-primary" type="submit">${isFirstUser ? '创建管理员' : '注册'}</button>
         </form>
         <p class="muted"><a href="/login">返回登录</a></p>
       </section>

@@ -107,26 +107,16 @@ function renderMenuTable(pages, portal, sites, activePageId) {
   </table>`;
 }
 
-function portalListIcon(portal) {
-  const icons = ['layout-dashboard', 'globe', 'library', 'store', 'compass', 'boxes', 'monitor', 'book-open', 'flag', 'layers'];
-  const key = String(portal.id || portal.slug || portal.name || '');
-  let hash = 0;
-  for (let i = 0; i < key.length; i += 1) hash = (hash + key.charCodeAt(i) * (i + 1)) % icons.length;
-  return icons[hash];
-}
-
-function portalListColor(theme) {
-  const mapped = LEGACY_ACCENTS[theme] || theme;
-  const item = PORTAL_ACCENTS.find((entry) => entry.id === mapped);
-  return item ? item.color : PORTAL_ACCENTS[0].color;
-}
-
 function renderSidebar({ portals, selectedPortal, query }) {
   const creating = !selectedPortal && query.create === '1';
+  const markFor = (layout) => {
+    const bar = layout === 'sidebar' ? '<path d="M9 4v16"/>' : '<path d="M3 9h18"/>';
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/>${bar}</svg>`;
+  };
   const portalNodes = (portals || []).map((portal) => {
     const active = selectedPortal && portal.id === selectedPortal.id ? ' active' : '';
     return `<a class="ppa-side-link${active}" href="/admin/portals/${escapeHtml(portal.id)}">
-      <span class="ppa-side-mark" style="background:${escapeHtml(portalListColor(portal.theme))}"><i data-lucide="${escapeHtml(portalListIcon(portal))}"></i></span>
+      <span class="ppa-side-mark">${markFor(portal.layout)}</span>
       <span class="ppa-side-name">${escapeHtml(portal.name)}</span>
     </a>`;
   }).join('');
@@ -242,13 +232,13 @@ function renderPortalEditor(portal, csrfToken, closeHref) {
         ${field('主题配色', accentPicker(portal.theme))}
         ${row(
           field('状态', `<select class="ant-input" name="status"><option value="active" ${portal.status === 'active' ? 'selected' : ''}>启用</option><option value="disabled" ${portal.status === 'disabled' ? 'selected' : ''}>禁用</option></select>`),
-          field('访问控制', `<label class="ant-checkbox"><input type="checkbox" name="loginRequired" ${portal.loginRequired ? 'checked' : ''}>需要登录后访问</label>`)
+          field('访问控制', `<div class="settings-switch-row"><div><div class="settings-switch-title">需要登录后访问</div></div><label class="switch"><input type="checkbox" name="loginRequired" ${portal.loginRequired ? 'checked' : ''}><span class="switch-ui" aria-hidden="true"></span></label></div>`)
         )}
         ${field('登录提示', `<input class="ant-input" name="loginMessage" value="${escapeHtml(portal.loginMessage)}" maxlength="200" placeholder="可选，显示在登录页">`)}
       </div>
     </form>
     <div class="ant-modal-footer">
-      <form class="ant-footer-danger" method="post" action="/admin/portals/${escapeHtml(portal.id)}/delete" onsubmit="return confirm('确定删除这个门户？删除后不可恢复。')">
+      <form class="ant-footer-danger" method="post" action="/admin/portals/${escapeHtml(portal.id)}/delete" data-confirm="确定删除这个门户？删除后不可恢复。">
         <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
         <button type="submit" class="ant-btn ant-btn-dangerous">删除门户</button>
       </form>
@@ -336,8 +326,8 @@ function renderPageForm({ portal, pages, sites, csrfToken, page = null, parentId
       ${renderIconField(page ? page.icon : 'file-text')}
       <label><span>排序</span><input name="sortOrder" type="number" value="${page ? Number(page.sortOrder) || 0 : nextSort(pages, asRoot ? '' : parentId)}"></label>
       <div class="ppa-check-row">
-        <label><input type="checkbox" name="isDefault" ${page && page.isDefault ? 'checked' : ''}> 设为默认页</label>
-        <label><input type="checkbox" name="visible" ${!page || page.visible ? 'checked' : ''}> 在菜单中显示</label>
+        <div class="settings-switch-row"><div><div class="settings-switch-title">设为默认页</div></div><label class="switch"><input type="checkbox" name="isDefault" ${page && page.isDefault ? 'checked' : ''}><span class="switch-ui" aria-hidden="true"></span></label></div>
+        <div class="settings-switch-row"><div><div class="settings-switch-title">在菜单中显示</div></div><label class="switch"><input type="checkbox" name="visible" ${!page || page.visible ? 'checked' : ''}><span class="switch-ui" aria-hidden="true"></span></label></div>
       </div>
       <div class="settings-actions">
         <button type="submit">${isEdit ? '保存' : '添加'}</button>
@@ -431,8 +421,8 @@ function portalAdminPage({ portals, sites, selectedPortal, pages = [], query, cu
       .ppa-shell{grid-template-columns:220px minmax(0,1fr)}
       .ppa-side{gap:2px;max-height:calc(100vh - 140px);overflow:auto}
       .ppa-side-link{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 10px;border-radius:8px;color:var(--text-1);text-decoration:none;font-size:14px}
-      .ppa-side-mark{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#fff;flex:none}
-      .ppa-side-mark i,.ppa-side-mark svg{width:13px;height:13px}
+      .ppa-side-mark{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;color:currentColor;flex:none}
+      .ppa-side-mark svg{width:16px;height:16px}
       .ppa-side-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .ppa-side-link:hover{background:var(--surface-2,rgba(0,0,0,.04))}
       .ppa-side-link.active{background:var(--primary-soft);color:var(--primary);font-weight:600}

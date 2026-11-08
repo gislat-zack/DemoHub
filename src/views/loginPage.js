@@ -19,7 +19,7 @@ function loginPage({ query = {}, hasUsers, allowRegister = true, settings = null
           <input type="hidden" name="next" value="${escapeHtml(next)}">
           <label>用户名<input name="username" autocomplete="username" required></label>
           <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
-          <button type="submit">登录</button>
+          <button class="btn btn-primary" type="submit">登录</button>
         </form>
         ${!hasUsers || allowRegister ? `<p class="muted"><a href="/register">${hasUsers ? '注册新账号' : '创建第一个管理员'}</a></p>` : ''}
       </section>

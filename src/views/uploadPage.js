@@ -1,14 +1,4 @@
-const { layout, escapeHtml, iconSvg, renderToast } = require('./layout');
-
-function folderUrl(folderId) {
-  if (!folderId) return '/admin';
-  return `/admin?folder=${encodeURIComponent(folderId)}`;
-}
-
-function uploadReturnUrl(selectedFolder) {
-  if (!selectedFolder) return '/admin';
-  return `/admin?folder=${encodeURIComponent(selectedFolder)}`;
-}
+const { escapeHtml, iconSvg } = require('./layout');
 
 function renderFolderOptions(folders, selectedValue = '') {
   return `<option value="" ${selectedValue === '' ? 'selected' : ''}>未分组</option>` + folders.map((folder) => `
@@ -16,87 +6,65 @@ function renderFolderOptions(folders, selectedValue = '') {
   `).join('');
 }
 
-function renderAlert(query) {
-  if (query.error) return renderToast(query.error, 'error');
-  return '';
-}
+function renderUploadModal({ folders, selectedFolder = '', returnFolder = '', csrfToken, returnView = 'sites', open = false }) {
+  const uploadFolderDefault = selectedFolder && selectedFolder !== 'ungrouped' && selectedFolder !== '__ungrouped__' ? selectedFolder : '';
 
-function uploadPage({ folders, selectedFolder, query, currentUser, csrfToken, settings, dataSize, diskStats }) {
-  const uploadFolderDefault = selectedFolder && selectedFolder !== 'ungrouped' ? selectedFolder : '';
-  const returnFolder = selectedFolder || '';
+  return `
+      <div class="tree-modal upload-modal" id="uploadModal" style="display:none" data-open="${open ? '1' : '0'}" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+        <div class="tree-modal-overlay" id="uploadOverlay"></div>
+        <div class="tree-modal-card upload-dialog">
+          <div class="tree-modal-header">
+            <span class="tree-modal-title" id="uploadModalTitle">上传文件</span>
+            <button class="tree-modal-close" id="uploadClose" type="button" aria-label="关闭"></button>
+          </div>
+          <form class="upload-dialog-form" id="uploadForm" method="post" action="/admin/upload" enctype="multipart/form-data">
+            <div class="upload-dialog-body">
+              <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+              <input type="hidden" name="returnFolder" value="${escapeHtml(returnFolder || '')}">
+              <input type="hidden" name="returnView" value="${escapeHtml(returnView)}">
+              <input type="hidden" name="folderName" id="folderNameInput" value="">
 
-  return layout({
-    title: '上传文件',
-    currentUser,
-    csrfToken,
-    activeNav: 'sites',
-    settings,
-    dataSize,
-    diskStats,
-    content: `
-      <div class="page-head">
-        <div>
-          <div class="page-title">上传文件</div>
-          <div class="page-desc">上传 HTML、ZIP、MHTML、图片、SVG、PDF，或直接上传文件夹，并指定站点主文件。</div>
+              <div class="upload-field">
+                <span class="upload-label">上传方式</span>
+                <div class="upload-mode">
+                  <button type="button" id="modeFile" class="is-active">单文件</button>
+                  <button type="button" id="modeFolder">文件夹</button>
+                </div>
+              </div>
+
+              <div class="drop-zone" id="dropZone">
+                <input class="drop-input" id="siteFileInput" type="file" name="siteFile" accept=".html,.htm,.zip,.mhtml,.mht,.png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.ico,.bmp" required>
+                <input class="drop-input" id="siteFolderInput" type="file" name="siteFiles" webkitdirectory directory multiple disabled>
+                <span class="drop-icon">${iconSvg('upload', 20)}</span>
+                <span class="drop-title" id="dropTitle">点击或拖拽文件到此区域上传</span>
+                <span class="drop-desc" id="dropDesc">支持 HTML、ZIP、MHTML、PNG、JPG、GIF、WEBP、SVG、PDF，最大 50MB。</span>
+                <span class="upload-file-name" id="selectedFileName">尚未选择文件</span>
+              </div>
+
+              <div class="upload-field entry-field" id="entryField" hidden>
+                <label class="upload-label" for="entrySelect">主文件</label>
+                <select id="entrySelect" name="entryFile"></select>
+                <span class="entry-hint" id="entryHint"></span>
+              </div>
+
+              <div class="upload-form-grid">
+                <label>
+                  <span>上传到文件夹</span>
+                  <select name="folderId">${renderFolderOptions(folders, uploadFolderDefault)}</select>
+                </label>
+                <label>
+                  <span>访问天数</span>
+                  <input type="number" name="accessDays" value="365" min="0" max="36500">
+                  <span class="entry-hint">0 表示永久有效</span>
+                </label>
+              </div>
+            </div>
+            <div class="upload-dialog-footer">
+              <button type="button" class="btn" id="uploadCancel">取消</button>
+              <button type="submit" class="btn btn-primary" id="uploadSubmit">开始上传</button>
+            </div>
+          </form>
         </div>
-        <div class="head-actions">
-          <a class="btn" href="${escapeHtml(uploadReturnUrl(selectedFolder))}">返回网站管理</a>
-        </div>
-      </div>
-
-      ${renderAlert(query)}
-
-      <div class="upload-page">
-        <form class="upload-card" id="uploadForm" method="post" action="/admin/upload" enctype="multipart/form-data">
-          <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
-          <input type="hidden" name="returnFolder" value="${escapeHtml(returnFolder)}">
-          <input type="hidden" name="returnView" value="sites">
-          <input type="hidden" name="folderName" id="folderNameInput" value="">
-
-          <div class="upload-mode">
-            <button type="button" id="modeFile" class="is-active">单文件</button>
-            <button type="button" id="modeFolder">文件夹</button>
-          </div>
-
-          <div class="drop-zone" id="dropZone">
-            <input class="drop-input" id="siteFileInput" type="file" name="siteFile" accept=".html,.htm,.zip,.mhtml,.mht,.png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.ico,.bmp" required>
-            <input class="drop-input" id="siteFolderInput" type="file" name="siteFiles" webkitdirectory directory multiple disabled>
-            <span class="drop-icon">${iconSvg('upload', 20)}</span>
-            <span class="drop-title" id="dropTitle">拖拽文件到这里，或点击选择文件</span>
-            <span class="drop-desc" id="dropDesc">支持 HTML、ZIP、MHTML、PNG、JPG、GIF、WEBP、SVG、PDF，最大 50MB。</span>
-            <span class="upload-file-name" id="selectedFileName">尚未选择文件</span>
-          </div>
-
-          <div class="upload-form-grid entry-field" id="entryField" hidden>
-            <label>
-              <span>主文件</span>
-              <select id="entrySelect" name="entryFile"></select>
-              <span class="entry-hint" id="entryHint"></span>
-            </label>
-          </div>
-
-          <div class="upload-form-grid">
-            <label>
-              <span>上传到文件夹</span>
-              <select name="folderId">${renderFolderOptions(folders, uploadFolderDefault)}</select>
-            </label>
-            <label>
-              <span>访问天数（0 = 永久）</span>
-              <input type="number" name="accessDays" value="365" min="0" max="36500" placeholder="365">
-            </label>
-          </div>
-          <div class="upload-form-grid" style="grid-template-columns:1fr;">
-            <label>
-              <span>当前返回位置</span>
-              <a class="link-box" href="${escapeHtml(folderUrl(selectedFolder))}">${escapeHtml(selectedFolder ? '当前分组列表' : '全部站点列表')}</a>
-            </label>
-          </div>
-
-          <div class="upload-actions">
-            <a class="btn" href="${escapeHtml(uploadReturnUrl(selectedFolder))}">取消</a>
-            <button type="submit" id="uploadSubmit">开始上传</button>
-          </div>
-        </form>
       </div>
 
       <script>
@@ -200,7 +168,7 @@ function uploadPage({ folders, selectedFolder, query, currentUser, csrfToken, se
             fileInput.disabled = mode !== 'file';
             folderInput.disabled = mode !== 'folder';
             fileInput.required = mode === 'file';
-            dropTitle.textContent = mode === 'folder' ? '拖拽文件夹到这里，或点击选择文件夹' : '拖拽文件到这里，或点击选择文件';
+            dropTitle.textContent = mode === 'folder' ? '点击或拖拽文件夹到此区域上传' : '点击或拖拽文件到此区域上传';
             dropDesc.textContent = mode === 'folder'
               ? '上传整个文件夹。总大小不超过 50MB，选完后指定 HTML 主文件。'
               : '支持 HTML、ZIP、MHTML、PNG、JPG、GIF、WEBP、SVG、PDF，最大 50MB。';
@@ -383,6 +351,34 @@ function uploadPage({ folders, selectedFolder, query, currentUser, csrfToken, se
             }), folderName);
           });
 
+          var modal = document.getElementById('uploadModal');
+          function openUpload() {
+            if (!modal) return;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+          }
+          function closeUpload() {
+            if (!modal) return;
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+          }
+          var uploadOverlay = document.getElementById('uploadOverlay');
+          var uploadClose = document.getElementById('uploadClose');
+          var uploadCancel = document.getElementById('uploadCancel');
+          if (uploadOverlay) uploadOverlay.addEventListener('click', closeUpload);
+          if (uploadClose) uploadClose.addEventListener('click', closeUpload);
+          if (uploadCancel) uploadCancel.addEventListener('click', closeUpload);
+          document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && modal && modal.style.display !== 'none') closeUpload();
+          });
+          document.addEventListener('click', function (event) {
+            if (event.target.closest('[data-open-upload]')) {
+              event.preventDefault();
+              openUpload();
+            }
+          });
+          if (modal && modal.getAttribute('data-open') === '1') openUpload();
+
           form.addEventListener('submit', function (event) {
             if (mode !== 'folder') return;
             event.preventDefault();
@@ -409,8 +405,7 @@ function uploadPage({ folders, selectedFolder, query, currentUser, csrfToken, se
           });
         })();
       </script>
-    `
-  });
+  `;
 }
 
-module.exports = { uploadPage };
+module.exports = { renderUploadModal };

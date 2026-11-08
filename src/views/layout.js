@@ -65,7 +65,8 @@ function renderToast(message, kind = 'success', options = {}) {
   if (!message) return '';
   const body = options.html ? String(message) : escapeHtml(message);
   const tone = kind === 'error' ? 'is-error' : 'is-success';
-  return `<div class="app-toast ${tone}" id="pageToast">${body}</div>`;
+  const mark = kind === 'error' ? '!' : '✓';
+  return `<div class="app-toast ${tone}" id="pageToast" role="status"><span class="app-toast-icon" aria-hidden="true">${mark}</span><span class="app-toast-text">${body}</span></div>`;
 }
 
 function themeToggleButton() {
@@ -172,6 +173,7 @@ function layout({ title, content, currentUser = null, csrfToken = '', activeNav 
   const logoUrl = settings.logo_url || '';
   const smallLogo = settings.logo_small_url || '';
   const useLargeLogo = settings.logo_display !== 'small' && Boolean(logoUrl);
+  const loginBg = title === '登录' ? (settings.login_bg_url || '') : '';
   const favicon = smallLogo || logoUrl;
 
   const shell = currentUser
@@ -179,7 +181,7 @@ function layout({ title, content, currentUser = null, csrfToken = '', activeNav 
         ${renderSidebar({ currentUser, csrfToken, activeNav, settings, dataSize, diskStats })}
         <main class="main-content">${content}</main>
       </div>`
-    : `<main class="auth-page">
+    : `<main class="auth-page${loginBg ? ' has-login-bg' : ''}"${loginBg ? ` style="background-image:url('${escapeHtml(loginBg)}')"` : ''}>
         ${useLargeLogo
           ? `<div class="auth-brand auth-brand-wide">
               <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(siteName)}">
@@ -203,30 +205,30 @@ function layout({ title, content, currentUser = null, csrfToken = '', activeNav 
   <meta name="csrf-token" content="${escapeHtml(csrfToken || '')}">
   <title>${escapeHtml(pageTitle)}</title>
   ${favicon ? `<link rel="icon" href="${escapeHtml(favicon)}">` : ''}
-  <link rel="stylesheet" href="/admin-static/admin.css?v=20261105-preview">
+  <link rel="stylesheet" href="/admin-static/admin.css?v=20261106-switch2">
 </head>
 <body>
   ${shell}
 
   <div class="tree-modal" id="actionModal" style="display:none;">
     <div class="tree-modal-overlay" id="actionOverlay"></div>
-    <div class="tree-modal-card" style="width:420px;">
+    <div class="tree-modal-card">
       <div class="tree-modal-header">
         <span class="tree-modal-title" id="actionTitle"></span>
-        <button class="tree-modal-close" id="actionClose" type="button">&times;</button>
+        <button class="tree-modal-close" id="actionClose" type="button" aria-label="关闭"></button>
       </div>
-      <div class="tree-modal-body" id="actionBody" style="padding:22px;"></div>
+      <div class="tree-modal-body" id="actionBody"></div>
     </div>
   </div>
 
-  <div class="tree-modal" id="previewModal" style="display:none;">
+  <div class="tree-modal" id="previewModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
     <div class="tree-modal-overlay" id="previewOverlay"></div>
-    <div class="tree-modal-card preview-card">
+    <div class="tree-modal-card file-preview-dialog">
       <div class="tree-modal-header">
         <span class="tree-modal-title" id="previewTitle">预览</span>
-        <button class="tree-modal-close" id="previewClose" type="button">&times;</button>
+        <button class="tree-modal-close" id="previewClose" type="button" aria-label="关闭"></button>
       </div>
-      <div class="tree-modal-body preview-body" id="previewBody"></div>
+      <div class="tree-modal-body file-preview-body" id="previewBody"></div>
     </div>
   </div>
 
@@ -244,10 +246,80 @@ function layout({ title, content, currentUser = null, csrfToken = '', activeNav 
       var toast = document.createElement('div');
       toast.id = 'pageToast';
       toast.className = 'app-toast ' + (kind === 'error' ? 'is-error' : 'is-success');
-      toast.textContent = message || '';
+      toast.setAttribute('role', 'status');
+      var icon = document.createElement('span');
+      icon.className = 'app-toast-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = kind === 'error' ? '!' : '✓';
+      var text = document.createElement('span');
+      text.className = 'app-toast-text';
+      text.textContent = message || '';
+      toast.appendChild(icon);
+      toast.appendChild(text);
       document.body.appendChild(toast);
       hideToast(toast);
     };
+    function closeConfirm() {
+      var pop = document.getElementById('appConfirm');
+      if (pop) pop.remove();
+    }
+    function openConfirm(anchor, message, onOk) {
+      closeConfirm();
+      var pop = document.createElement('div');
+      pop.id = 'appConfirm';
+      pop.className = 'app-confirm';
+      pop.setAttribute('role', 'dialog');
+      var title = document.createElement('div');
+      title.className = 'app-confirm-title';
+      title.textContent = message;
+      var actions = document.createElement('div');
+      actions.className = 'app-confirm-actions';
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'btn app-confirm-cancel';
+      cancel.textContent = '取消';
+      var ok = document.createElement('button');
+      ok.type = 'button';
+      ok.className = 'btn app-confirm-ok';
+      ok.textContent = '确定';
+      actions.appendChild(cancel);
+      actions.appendChild(ok);
+      pop.appendChild(title);
+      pop.appendChild(actions);
+      document.body.appendChild(pop);
+      var rect = anchor.getBoundingClientRect();
+      var top = rect.bottom + 8;
+      var left = Math.min(rect.left, window.innerWidth - 264);
+      if (top + pop.offsetHeight > window.innerHeight - 8) top = Math.max(8, rect.top - pop.offsetHeight - 8);
+      pop.style.top = top + 'px';
+      pop.style.left = Math.max(8, left) + 'px';
+      cancel.addEventListener('click', closeConfirm);
+      ok.addEventListener('click', function () { closeConfirm(); onOk(); });
+      setTimeout(function () {
+        document.addEventListener('mousedown', function outside(ev) {
+          if (!pop.isConnected || pop.contains(ev.target)) return;
+          document.removeEventListener('mousedown', outside);
+          closeConfirm();
+        });
+      }, 0);
+    }
+    document.addEventListener('submit', function (e) {
+      var form = e.target;
+      if (!form || !form.getAttribute) return;
+      var message = form.getAttribute('data-confirm');
+      if (!message || form.getAttribute('data-confirmed') === '1') return;
+      e.preventDefault();
+      e.stopPropagation();
+      var trigger = form.querySelector('[type="submit"]') || form;
+      openConfirm(trigger, message, function () {
+        form.setAttribute('data-confirmed', '1');
+        if (typeof form.requestSubmit === 'function') form.requestSubmit();
+        else form.submit();
+      });
+    }, true);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeConfirm();
+    });
 
     window.filePreviewType = function (name) {
       var ext = String(name || '').toLowerCase().split('.').pop();
@@ -276,33 +348,52 @@ function layout({ title, content, currentUser = null, csrfToken = '', activeNav 
       function closePreview() {
         previewModal.style.display = 'none';
         previewBody.innerHTML = '';
+        document.body.style.overflow = '';
+      }
+      function previewSrc(url) {
+        try {
+          var parsed = new URL(url, window.location.href);
+          return parsed.pathname + parsed.search + parsed.hash;
+        } catch (_error) {
+          return url;
+        }
+      }
+      function showPreviewFallback() {
+        previewBody.innerHTML = '';
+        var tip = document.createElement('div');
+        tip.className = 'file-preview-fallback';
+        tip.textContent = '无法预览该文件';
+        previewBody.appendChild(tip);
       }
       previewOverlay.addEventListener('click', closePreview);
       previewClose.addEventListener('click', closePreview);
       document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closePreview();
+        if (e.key === 'Escape' && previewModal.style.display !== 'none') closePreview();
       });
       document.addEventListener('click', function (e) {
         var btn = e.target.closest('[data-preview-url]');
         if (!btn) return;
-        var url = btn.getAttribute('data-preview-url');
+        e.preventDefault();
+        var url = previewSrc(btn.getAttribute('data-preview-url'));
         var type = btn.getAttribute('data-preview-type');
         var name = btn.getAttribute('data-preview-name') || '预览';
         previewTitle.textContent = name;
         previewBody.innerHTML = '';
         if (type === 'pdf') {
           var frame = document.createElement('iframe');
-          frame.className = 'preview-frame';
+          frame.className = 'file-preview-frame';
           frame.src = url;
           frame.title = name;
           previewBody.appendChild(frame);
         } else {
           var img = document.createElement('img');
-          img.className = 'preview-image';
-          img.src = url;
+          img.className = 'file-preview-image';
           img.alt = name;
+          img.addEventListener('error', showPreviewFallback);
+          img.src = url;
           previewBody.appendChild(img);
         }
+        document.body.style.overflow = 'hidden';
         previewModal.style.display = 'flex';
       });
     }

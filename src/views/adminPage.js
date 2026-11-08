@@ -1,5 +1,6 @@
 const { layout, escapeHtml, formatBytes, statCard, iconSvg, fileKindIcon, renderToast } = require('./layout');
-const { typeLabel, iconClass, previewMode, isAssetKind } = require('../services/fileTypes');
+const { iconClass, previewMode, isAssetKind } = require('../services/fileTypes');
+const { renderUploadModal } = require('./uploadPage');
 
 function formatDate(value) {
   return new Date(value).toLocaleString('zh-CN', { hour12: false });
@@ -25,11 +26,6 @@ function folderUrl(folderId, view) {
   return `${base}&folder=${encodeURIComponent(folderId)}`;
 }
 
-function uploadUrl(selectedFolder) {
-  if (!selectedFolder) return '/admin/upload';
-  return `/admin/upload?folder=${encodeURIComponent(selectedFolder)}`;
-}
-
 function renderFolderTabs({ folders, selectedFolder, totalCount, ungroupedCount, view }) {
   const base = view ? `?view=${encodeURIComponent(view)}` : '';
   const sep = view ? '&' : '?';
@@ -51,27 +47,24 @@ function renderFolderOptions(folders, selectedValue = '') {
   `).join('');
 }
 
-function siteKindLabel(kind) {
-  return typeLabel(kind);
-}
-
 function siteIconClass(kind) {
   return iconClass(kind);
 }
 
 function renderSiteRows({ sites, folders, baseUrl, csrfToken, selectedFolder, view }) {
   if (sites.length === 0) {
-    return '<tr><td colspan="9" class="empty-cell">当前分组还没有上传站点。</td></tr>';
+    return '<tr><td colspan="8" class="empty-cell">当前分组还没有上传站点。</td></tr>';
   }
 
   return sites.map((site) => {
     const url = `${baseUrl}/sites/${site.id}/`;
+    const previewUrl = `/sites/${site.id}/`;
     const dirBtn = site.kind === 'html' || isAssetKind(site.kind)
       ? ''
       : `<a class="act tree-btn" data-site-id="${escapeHtml(site.id)}" data-site-name="${escapeHtml(site.originalName)}" href="javascript:void(0)">目录</a>`;
     const preview = previewMode(site.kind);
     const previewBtn = preview
-      ? `<button type="button" class="act" data-preview-url="${escapeHtml(url)}" data-preview-type="${escapeHtml(preview)}" data-preview-name="${escapeHtml(site.originalName)}">预览</button>`
+      ? `<button type="button" class="act" data-preview-url="${escapeHtml(previewUrl)}" data-preview-type="${escapeHtml(preview)}" data-preview-name="${escapeHtml(site.originalName)}">预览</button>`
       : `<a class="act" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">预览</a>`;
     return `<tr class="site-row" data-name="${escapeHtml(site.originalName)}" data-url="${escapeHtml(url)}">
       <td>
@@ -83,7 +76,6 @@ function renderSiteRows({ sites, folders, baseUrl, csrfToken, selectedFolder, vi
           </div>
         </div>
       </td>
-      <td><span class="tag">${escapeHtml(siteKindLabel(site.kind))}</span></td>
       <td><span class="tag ${site.folderName ? 'tag-primary' : ''}">${escapeHtml(site.folderName || '未分组')}</span></td>
       <td class="num">${escapeHtml(site.fileCount)}</td>
       <td class="num">${escapeHtml(formatBytes(site.sizeBytes))}</td>
@@ -99,7 +91,7 @@ function renderSiteRows({ sites, folders, baseUrl, csrfToken, selectedFolder, vi
           ${previewBtn}
           ${dirBtn}
           <a class="act" href="javascript:void(0)" data-action-modal="move" data-modal-title="移动站点 — ${escapeHtml(site.originalName)}" data-action-url="/admin/sites/${escapeHtml(site.id)}/move" data-csrf="${escapeHtml(csrfToken)}" data-folder="${escapeHtml(selectedFolder || '')}" data-view="${escapeHtml(view || '')}" data-options="${escapeHtml(renderFolderOptions(folders, site.folderId || ''))}">移动</a>
-          <form method="post" action="/admin/sites/${escapeHtml(site.id)}/delete" onsubmit="return confirm('确认删除这个站点吗？');">
+          <form method="post" action="/admin/sites/${escapeHtml(site.id)}/delete" data-confirm="确认删除这个站点吗？">
             <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
             <input type="hidden" name="returnFolder" value="${escapeHtml(selectedFolder || '')}">
             <input type="hidden" name="returnView" value="${escapeHtml(view || '')}">
@@ -142,13 +134,14 @@ function adminPage({ sites, folders, selectedFolder, totalCount, ungroupedCount,
           <div class="page-desc">${escapeHtml(pageDesc)}</div>
         </div>
         <div class="head-actions">
-          <div class="nav-search-wrap">
+          <form class="nav-search-wrap" role="search" id="siteSearchForm" action="#" onsubmit="return false;">
+            <label class="sr-only" for="siteSearch">搜索站点</label>
             <span class="nav-search-icon">${iconSvg('site', 15)}</span>
-            <input type="text" class="nav-search" id="siteSearch" placeholder="搜索，回车直达" autocomplete="off" autocorrect="off" spellcheck="false">
+            <input type="search" class="nav-search" id="siteSearch" placeholder="搜索，回车直达" autocomplete="off" autocorrect="off" spellcheck="false">
             <kbd class="nav-search-kbd">↵</kbd>
-          </div>
+          </form>
           <div class="nav-toolbar-meta" id="siteResultMeta"></div>
-          <a class="btn btn-primary" href="${escapeHtml(uploadUrl(selectedFolder))}">${iconSvg('upload', 15)}上传文件</a>
+          <button type="button" class="btn btn-primary" data-open-upload>${iconSvg('upload', 15)}上传文件</button>
         </div>
       </div>
 
@@ -164,8 +157,7 @@ function adminPage({ sites, folders, selectedFolder, totalCount, ungroupedCount,
           <table>
             <thead>
               <tr>
-                <th style="width:24%">名称</th>
-                <th>类型</th>
+                <th style="width:28%">名称</th>
                 <th>分组</th>
                 <th style="text-align:right">文件数</th>
                 <th style="text-align:right">大小</th>
@@ -193,7 +185,7 @@ function adminPage({ sites, folders, selectedFolder, totalCount, ungroupedCount,
         <div class="tree-modal-card">
           <div class="tree-modal-header">
             <span class="tree-modal-title" id="treeModalTitle">目录结构</span>
-            <button class="tree-modal-close" id="treeModalClose" type="button">&times;</button>
+            <button class="tree-modal-close" id="treeModalClose" type="button" aria-label="关闭"></button>
           </div>
           <div class="tree-modal-body" id="treeModalBody">
             <div class="tree-loading">加载中...</div>
@@ -203,12 +195,12 @@ function adminPage({ sites, folders, selectedFolder, totalCount, ungroupedCount,
 
       <div class="tree-modal" id="accessDaysModal" style="display:none;">
         <div class="tree-modal-overlay" id="accessDaysOverlay"></div>
-        <div class="tree-modal-card" style="width:420px;">
+        <div class="tree-modal-card">
           <div class="tree-modal-header">
             <span class="tree-modal-title" id="accessDaysTitle">设置有效期</span>
-            <button class="tree-modal-close" id="accessDaysClose" type="button">&times;</button>
+            <button class="tree-modal-close" id="accessDaysClose" type="button" aria-label="关闭"></button>
           </div>
-          <div class="tree-modal-body" style="padding:22px;">
+          <div class="tree-modal-body">
             <form method="post" action="" id="accessDaysForm">
               <input type="hidden" name="_csrf" id="adCsrf" value="">
               <input type="hidden" name="returnFolder" id="adFolder" value="">
@@ -387,6 +379,14 @@ function adminPage({ sites, folders, selectedFolder, totalCount, ungroupedCount,
         });
       })();
       </script>
+      ${renderUploadModal({
+        folders,
+        selectedFolder,
+        returnFolder: selectedFolder || '',
+        csrfToken,
+        returnView: 'sites',
+        open: query.upload === '1'
+      })}
     `
   });
 }

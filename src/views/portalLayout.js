@@ -7,6 +7,11 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function portalMark(layout) {
+  const bar = layout === 'sidebar' ? '<path d="M9 4v16"/>' : '<path d="M3 9h18"/>';
+  return `<svg class="portal-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/>${bar}</svg>`;
+}
+
 function buildMenuTree(pages, activeId, slug) {
   function renderNode(node, depth) {
     const href = `/portal/${slug}/${node.routePath}`;
@@ -30,7 +35,7 @@ function portalLayout({ portal, menuTree, content, currentPage, baseHref, curren
   const title = currentPage ? `${currentPage.title} - ${portal.name}` : portal.name;
   const logoHtml = portal.logoUrl
     ? `<img src="${escapeHtml(portal.logoUrl)}" alt="${escapeHtml(portal.name)}" class="portal-brand-logo">`
-    : `<span class="portal-brand-text">${escapeHtml(portal.name.slice(0, 2))}</span>`;
+    : portalMark(portal.layout);
 
   const brand = `<a href="/portal/${portal.slug}" class="portal-brand" title="${escapeHtml(portal.name)}">
     ${logoHtml}
@@ -104,7 +109,7 @@ function portalLoginPage({ portal, csrfToken, error, next }) {
   <div class="portal-login-wrap">
     <div class="portal-login-card">
       <div class="portal-login-brand">
-        ${portal.logoUrl ? `<img src="${escapeHtml(portal.logoUrl)}" alt="${escapeHtml(portal.name)}" class="portal-brand-logo-lg">` : `<span class="portal-brand-text-lg">${escapeHtml(portal.name.slice(0, 2))}</span>`}
+        ${portal.logoUrl ? `<img src="${escapeHtml(portal.logoUrl)}" alt="${escapeHtml(portal.name)}" class="portal-brand-logo-lg">` : `<span class="portal-brand-text-lg">${portalMark(portal.layout)}</span>`}
         <div class="portal-login-title">${escapeHtml(portal.name)}</div>
       </div>
       <div class="portal-login-message">${escapeHtml(loginMessage)}</div>
